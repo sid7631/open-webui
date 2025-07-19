@@ -48,15 +48,24 @@ def search_duckduckgo(
     ]
 
 
-def search_duckduckgo_images(query: str, count: int, safesearch: str = DDG_SAFESEARCH.value) -> List[str]:
-    """Return image URLs from DuckDuckGo image search."""
-    images = []
+
+def search_duckduckgo_images(
+    query: str, count: int, safesearch: str = DDG_SAFESEARCH.value
+) -> List[str]:
+    """Return image URLs from DuckDuckGo image search without duplicates."""
+    images: List[str] = []
+    seen: set[str] = set()
     with DDGS() as ddgs:
         try:
-            for result in ddgs.images(query, safesearch=safesearch, max_results=count):
+            for result in ddgs.images(
+                query, safesearch=safesearch, max_results=count * 2
+            ):
                 url = result.get("image") or result.get("thumbnail")
-                if url:
+                if url and url not in seen:
                     images.append(url)
+                    seen.add(url)
+                    if len(images) >= count:
+                        break
         except RatelimitException as e:
             log.error(f"RatelimitException: {e}")
     return images
