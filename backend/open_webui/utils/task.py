@@ -261,6 +261,14 @@ def image_prompt_generation_template(
     return template
 
 
+def image_caption_generation_template(template: str, user: Optional[dict] = None) -> str:
+    template = prompt_template(
+        template,
+        **({"user_name": user.get("name"), "user_location": user.get("location")} if user else {}),
+    )
+    return template
+
+
 def emoji_generation_template(
     template: str, prompt: str, user: Optional[dict] = None
 ) -> str:

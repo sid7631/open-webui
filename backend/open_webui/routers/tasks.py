@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from typing import Optional
 import logging
 import re
+import json
 
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.task import (
@@ -12,6 +13,7 @@ from open_webui.utils.task import (
     follow_up_generation_template,
     query_generation_template,
     image_prompt_generation_template,
+    image_caption_generation_template,
     autocomplete_generation_template,
     tags_generation_template,
     emoji_generation_template,
@@ -29,11 +31,13 @@ from open_webui.config import (
     DEFAULT_FOLLOW_UP_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_TAGS_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE,
+    DEFAULT_IMAGE_CAPTION_PROMPT_TEMPLATE,
     DEFAULT_QUERY_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_AUTOCOMPLETE_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_EMOJI_GENERATION_PROMPT_TEMPLATE,
     DEFAULT_MOA_GENERATION_PROMPT_TEMPLATE,
 )
+from open_webui.models.files import Files
 from open_webui.env import SRC_LOG_LEVELS
 
 
@@ -173,7 +177,15 @@ async def generate_title(
     else:
         models = request.app.state.MODELS
 
-    model_id = form_data["model"]
+    model_id = form_data.get("model")
+    if not model_id:
+        model_id = (
+            (user.settings.ui.get("imageCaptionModel") if user.settings and user.settings.ui else None)
+            or request.app.state.config.DEFAULT_IMAGE_CAPTION_MODEL
+        )
+    if not model_id:
+        model_id = next((m["id"] for m in models.values() if m.get("owned_by") == "ollama"), None)
+
     if model_id not in models:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -231,6 +243,107 @@ async def generate_title(
     }
 
     # Process the payload through the pipeline
+    try:
+        payload = await process_pipeline_inlet_filter(request, payload, user, models)
+    except Exception as e:
+        raise e
+
+    try:
+        res = await generate_chat_completion(request, form_data=payload, user=user)
+        content_resp = (
+            res.get("choices", [{}])[0]
+            .get("message", {})
+            .get("content", "")
+        )
+        try:
+            sanitized = content_resp.replace("`", '"').replace("'", '"').replace("“", '"').replace("”", '"')
+            start = sanitized.find("{")
+            end = sanitized.rfind("}")
+            if start != -1 and end != -1:
+                data = json.loads(sanitized[start : end + 1])
+                Files.update_file_metadata_by_id(file.id, data)
+        except Exception:
+            pass
+        return res
+    except Exception as e:
+        log.error("Exception occurred", exc_info=True)
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": "An internal error has occurred."},
+        )
+
+
+@router.post("/image_caption/completions")
+async def generate_image_caption(
+    request: Request, form_data: dict, user=Depends(get_verified_user)
+):
+    if not request.app.state.config.ENABLE_IMAGE_CAPTION_GENERATION:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Image caption generation is disabled",
+        )
+
+    if getattr(request.state, "direct", False) and hasattr(request.state, "model"):
+        models = {
+            request.state.model["id"]: request.state.model,
+        }
+    else:
+        models = request.app.state.MODELS
+
+    model_id = form_data["model"]
+    if model_id not in models:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Model not found",
+        )
+
+    model = models[model_id]
+    if model.get("owned_by") != "ollama":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only Ollama models are supported",
+        )
+
+    file = Files.get_file_by_id(form_data["file_id"])
+    if file is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="File not found",
+        )
+
+    base_url = str(request.base_url).rstrip("/")
+    image_url = f"{base_url}/api/v1/files/{file.id}/content"
+
+    if request.app.state.config.IMAGE_CAPTION_PROMPT_TEMPLATE != "":
+        template = request.app.state.config.IMAGE_CAPTION_PROMPT_TEMPLATE
+    else:
+        template = DEFAULT_IMAGE_CAPTION_PROMPT_TEMPLATE
+
+    content = image_caption_generation_template(
+        template,
+        user={"name": user.name},
+    )
+
+    payload = {
+        "model": model_id,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": content},
+                    {"type": "image_url", "image_url": {"url": image_url}},
+                ],
+            }
+        ],
+        "stream": False,
+        "metadata": {
+            **(request.state.metadata if hasattr(request.state, "metadata") else {}),
+            "task": str(TASKS.IMAGE_CAPTION_GENERATION),
+            "task_body": form_data,
+            "chat_id": form_data.get("chat_id", None),
+        },
+    }
+
     try:
         payload = await process_pipeline_inlet_filter(request, payload, user, models)
     except Exception as e:
