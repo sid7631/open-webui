@@ -1043,6 +1043,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
             }
         )
 
+    if metadata.get("files"):
+        await event_emitter(
+            {
+                "type": "chat:message:files",
+                "data": {"files": metadata["files"]},
+            }
+        )
+
     return form_data, metadata, events
 
 

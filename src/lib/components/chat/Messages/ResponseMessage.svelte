@@ -59,20 +59,22 @@
 		files?: { type: string; url: string }[];
 		timestamp: number;
 		role: string;
-		statusHistory?: {
-			done: boolean;
-			action: string;
-			description: string;
-			urls?: string[];
-			query?: string;
-		}[];
-		status?: {
-			done: boolean;
-			action: string;
-			description: string;
-			urls?: string[];
-			query?: string;
-		};
+                statusHistory?: {
+                        done: boolean;
+                        action: string;
+                        description: string;
+                        urls?: string[];
+                        images?: string[];
+                        query?: string;
+                }[];
+                status?: {
+                        done: boolean;
+                        action: string;
+                        description: string;
+                        urls?: string[];
+                        images?: string[];
+                        query?: string;
+                };
 		done: boolean;
 		error?: boolean | { content: string };
 		sources?: string[];
