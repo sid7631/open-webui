@@ -93,7 +93,7 @@
                 {#if status.images && status.images.length > 0}
                         <div class="flex overflow-x-auto gap-2 p-3 px-4 border-t border-gray-300/30 dark:border-gray-700/50">
                                 {#each status.images as img}
-                                        <Image src={img} alt={status.query} className="w-28" imageClassName="rounded-lg" />
+                                        <Image src={img} alt={status.query} className="w-28 h-28" imageClassName="rounded-lg object-cover w-full h-full" />
                                 {/each}
                         </div>
                 {/if}
