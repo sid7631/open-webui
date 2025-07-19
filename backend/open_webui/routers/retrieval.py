@@ -1972,6 +1972,11 @@ async def process_web_search(
             doc.metadata.get("source") for doc in docs if doc.metadata.get("source")
         ]  # only keep the urls returned by the loader
 
+        images = []
+        for doc in docs:
+            images.extend(doc.metadata.get("images", []))
+        images = list(dict.fromkeys(images))
+
         if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             return {
                 "status": True,
@@ -1985,6 +1990,7 @@ async def process_web_search(
                     for doc in docs
                 ],
                 "loaded_count": len(docs),
+                "images": images,
             }
         else:
             # Create a single collection for all documents
@@ -2011,6 +2017,7 @@ async def process_web_search(
                 "collection_names": [collection_name],
                 "filenames": urls,
                 "loaded_count": len(docs),
+                "images": images,
             }
     except Exception as e:
         log.exception(e)
