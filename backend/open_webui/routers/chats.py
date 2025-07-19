@@ -18,7 +18,7 @@ from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
 from open_webui.utils.chat import generate_chat_completion
-from open_webui.models.memories import Memories
+from open_webui.models.memories import Memories, MemoryModel
 from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel

@@ -211,6 +211,16 @@ In the last part of the command, replace `open-webui` with your container name i
 
 Check our Updating Guide available in our [Open WebUI Documentation](https://docs.openwebui.com/getting-started/updating).
 
+### Updating Your Ollama Models
+
+If you're running Open WebUI with Ollama, you can update your local models using the provided `make update` command:
+
+```bash
+make update
+```
+
+This command pulls the latest changes, updates your installed Ollama models via `update_ollama_models.sh`, rebuilds the containers, and restarts Open WebUI.
+
 ### Using the Dev Branch 🌙
 
 > [!WARNING]
