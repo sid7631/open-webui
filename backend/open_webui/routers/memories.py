@@ -37,10 +37,12 @@ async def get_memories(user=Depends(get_verified_user)):
 
 class AddMemoryForm(BaseModel):
     content: str
+    tags: Optional[list[str]] = None
 
 
 class MemoryUpdateModel(BaseModel):
     content: Optional[str] = None
+    tags: Optional[list[str]] = None
 
 
 @router.post("/add", response_model=Optional[MemoryModel])
@@ -49,7 +51,8 @@ async def add_memory(
     form_data: AddMemoryForm,
     user=Depends(get_verified_user),
 ):
-    memory = Memories.insert_new_memory(user.id, form_data.content)
+    meta = {"tags": form_data.tags} if form_data.tags else None
+    memory = Memories.insert_new_memory(user.id, form_data.content, meta)
 
     VECTOR_DB_CLIENT.upsert(
         collection_name=f"user-memory-{user.id}",
@@ -60,7 +63,10 @@ async def add_memory(
                 "vector": request.app.state.EMBEDDING_FUNCTION(
                     memory.content, user=user
                 ),
-                "metadata": {"created_at": memory.created_at},
+                "metadata": {
+                    "created_at": memory.created_at,
+                    **({"tags": form_data.tags} if form_data.tags else {}),
+                },
             }
         ],
     )
@@ -154,7 +160,7 @@ async def update_memory_by_id(
     user=Depends(get_verified_user),
 ):
     memory = Memories.update_memory_by_id_and_user_id(
-        memory_id, user.id, form_data.content
+        memory_id, user.id, form_data.content, {"tags": form_data.tags} if form_data.tags else None
     )
     if memory is None:
         raise HTTPException(status_code=404, detail="Memory not found")
@@ -172,12 +178,32 @@ async def update_memory_by_id(
                     "metadata": {
                         "created_at": memory.created_at,
                         "updated_at": memory.updated_at,
+                        **({"tags": form_data.tags} if form_data.tags else {}),
                     },
                 }
             ],
         )
 
     return memory
+
+
+class MemoryTagsForm(BaseModel):
+    tags: list[str]
+
+
+@router.post("/{memory_id}/tags", response_model=Optional[MemoryModel])
+async def update_memory_tags(
+    memory_id: str,
+    form_data: MemoryTagsForm,
+    user=Depends(get_verified_user),
+):
+    memory = Memories.get_memory_by_id(memory_id)
+    if memory is None or memory.user_id != user.id:
+        raise HTTPException(status_code=404, detail="Memory not found")
+
+    return Memories.update_memory_by_id_and_user_id(
+        memory_id, user.id, memory.content, {"tags": form_data.tags}
+    )
 
 
 ############################

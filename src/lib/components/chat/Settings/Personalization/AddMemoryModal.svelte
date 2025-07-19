@@ -1,8 +1,9 @@
-<script>
+<script lang="ts">
 	import { createEventDispatcher, getContext } from 'svelte';
 
 	import Modal from '$lib/components/common/Modal.svelte';
-	import { addNewMemory, updateMemoryById } from '$lib/apis/memories';
+import { addNewMemory } from '$lib/apis/memories';
+import Tags from '$lib/components/common/Tags.svelte';
 	import { toast } from 'svelte-sonner';
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import XMark from '$lib/components/icons/XMark.svelte';
@@ -12,13 +13,14 @@
 	export let show;
 	const i18n = getContext('i18n');
 
-	let loading = false;
-	let content = '';
+let loading = false;
+let content = '';
+let tagsList: { name: string }[] = [];
 
 	const submitHandler = async () => {
 		loading = true;
 
-		const res = await addNewMemory(localStorage.token, content).catch((error) => {
+                const res = await addNewMemory(localStorage.token, content, tagsList.map(t => t.name)).catch((error) => {
 			toast.error(`${error}`);
 
 			return null;
@@ -27,7 +29,8 @@
 		if (res) {
 			console.log(res);
 			toast.success($i18n.t('Memory added successfully'));
-			content = '';
+                        content = '';
+                        tagsList = [];
 			show = false;
 			dispatch('save');
 		}
@@ -69,10 +72,22 @@
 							placeholder={$i18n.t('Enter a detail about yourself for your LLMs to recall')}
 						/>
 
-						<div class="text-xs text-gray-500">
-							ⓘ {$i18n.t('Refer to yourself as "User" (e.g., "User is learning Spanish")')}
-						</div>
-					</div>
+                                                <div class="text-xs text-gray-500">
+                                                        ⓘ {$i18n.t('Refer to yourself as "User" (e.g., "User is learning Spanish")')}
+                                                </div>
+                                        </div>
+
+                                        <div class="mt-2">
+                                                <Tags
+                                                        tags={tagsList}
+                                                        on:add={(e) => {
+                                                                tagsList = [...tagsList, { name: e.detail }];
+                                                        }}
+                                                        on:delete={(e) => {
+                                                                tagsList = tagsList.filter((t) => t.name !== e.detail);
+                                                        }}
+                                                />
+                                        </div>
 
 					<div class="flex justify-end pt-1 text-sm font-medium">
 						<button
