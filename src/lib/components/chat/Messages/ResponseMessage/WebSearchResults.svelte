@@ -2,9 +2,10 @@
 	import ChevronDown from '$lib/components/icons/ChevronDown.svelte';
 	import ChevronUp from '$lib/components/icons/ChevronUp.svelte';
 	import Search from '$lib/components/icons/Search.svelte';
-	import Collapsible from '$lib/components/common/Collapsible.svelte';
+        import Collapsible from '$lib/components/common/Collapsible.svelte';
+        import Image from '$lib/components/common/Image.svelte';
 
-	export let status = { urls: [], query: '' };
+        export let status = { urls: [], images: [], query: '' };
 	let state = false;
 </script>
 
@@ -58,7 +59,7 @@
 			</a>
 		{/if}
 
-		{#each status.urls as url, urlIdx}
+                {#each status.urls as url, urlIdx}
 			<a
 				href={url}
 				target="_blank"
@@ -88,6 +89,13 @@
 					</svg>
 				</div>
 			</a>
-		{/each}
-	</div>
+                {/each}
+                {#if status.images && status.images.length > 0}
+                        <div class="flex overflow-x-auto gap-2 p-3 px-4 border-t border-gray-300/30 dark:border-gray-700/50">
+                                {#each status.images as img}
+                                        <Image src={img} alt={status.query} className="w-28" imageClassName="rounded-lg" />
+                                {/each}
+                        </div>
+                {/if}
+        </div>
 </Collapsible>

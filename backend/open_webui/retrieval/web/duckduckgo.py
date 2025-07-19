@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, List
 
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from ddgs import DDGS
@@ -44,3 +44,17 @@ def search_duckduckgo(
         )
         for result in search_results
     ]
+
+
+def search_duckduckgo_images(query: str, count: int) -> List[str]:
+    """Return image URLs from DuckDuckGo image search."""
+    images = []
+    with DDGS() as ddgs:
+        try:
+            for result in ddgs.images(query, safesearch="moderate", max_results=count):
+                url = result.get("image") or result.get("thumbnail")
+                if url:
+                    images.append(url)
+        except RatelimitException as e:
+            log.error(f"RatelimitException: {e}")
+    return images
