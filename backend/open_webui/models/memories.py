@@ -4,7 +4,7 @@ from typing import Optional
 
 from open_webui.internal.db import Base, get_db
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import BigInteger, Column, String, Text
+from sqlalchemy import BigInteger, Column, String, Text, JSON
 
 ####################
 # Memory DB Schema
@@ -17,6 +17,7 @@ class Memory(Base):
     id = Column(String, primary_key=True)
     user_id = Column(String)
     content = Column(Text)
+    meta = Column(JSON, nullable=True)
     updated_at = Column(BigInteger)
     created_at = Column(BigInteger)
 
@@ -25,6 +26,7 @@ class MemoryModel(BaseModel):
     id: str
     user_id: str
     content: str
+    meta: Optional[dict] = None
     updated_at: int  # timestamp in epoch
     created_at: int  # timestamp in epoch
 
@@ -41,6 +43,7 @@ class MemoriesTable:
         self,
         user_id: str,
         content: str,
+        meta: Optional[dict] = None,
     ) -> Optional[MemoryModel]:
         with get_db() as db:
             id = str(uuid.uuid4())
@@ -50,6 +53,7 @@ class MemoriesTable:
                     "id": id,
                     "user_id": user_id,
                     "content": content,
+                    "meta": meta,
                     "created_at": int(time.time()),
                     "updated_at": int(time.time()),
                 }
@@ -68,11 +72,15 @@ class MemoriesTable:
         id: str,
         user_id: str,
         content: str,
+        meta: Optional[dict] = None,
     ) -> Optional[MemoryModel]:
         with get_db() as db:
             try:
+                update_data = {"content": content, "updated_at": int(time.time())}
+                if meta is not None:
+                    update_data["meta"] = meta
                 db.query(Memory).filter_by(id=id, user_id=user_id).update(
-                    {"content": content, "updated_at": int(time.time())}
+                    update_data
                 )
                 db.commit()
                 return self.get_memory_by_id(id)
