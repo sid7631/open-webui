@@ -713,7 +713,7 @@
                                                                 {#each message.files as file}
                                                                         <div>
                                                                                 {#if file.type === 'image'}
-                                                                                        <Image src={file.url} alt={message.content} />
+        <Image src={file.url} alt={message.content} className="w-28 h-28" imageClassName="rounded-lg object-cover w-full h-full" />
                                                                                 {:else}
                                                                                         <FileItem
                                                                                                 item={file}
@@ -733,7 +733,7 @@
                                                         <div class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap">
                                                                 {#each message.files.filter((f) => f.type === 'web_search' && f.images?.length > 0) as file}
                                                                         {#each file.images as img}
-                                                                                <Image src={img} alt={message.content} />
+        <Image src={img} alt={message.content} className="w-28 h-28" imageClassName="rounded-lg object-cover w-full h-full" />
                                                                         {/each}
                                                                 {/each}
                                                         </div>
