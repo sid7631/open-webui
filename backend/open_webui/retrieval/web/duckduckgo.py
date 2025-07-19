@@ -48,7 +48,6 @@ def search_duckduckgo(
     ]
 
 
-
 def search_duckduckgo_images(
     query: str, count: int, safesearch: str = DDG_SAFESEARCH.value
 ) -> List[str]:
