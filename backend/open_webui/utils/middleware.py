@@ -471,6 +471,7 @@ async def chat_web_search_handler(
                         "description": "Searched {{count}} sites",
                         "urls": results["filenames"],
                         "images": results.get("images", []),
+                        "snippets": results.get("snippets", []),
                         "query": ", ".join(queries),
                         "done": True,
                     },

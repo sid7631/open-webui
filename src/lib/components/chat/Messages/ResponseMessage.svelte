@@ -65,6 +65,7 @@
                         description: string;
                         urls?: string[];
                         images?: string[];
+                        snippets?: string[];
                         query?: string;
                 }[];
                 status?: {
@@ -73,6 +74,7 @@
                         description: string;
                         urls?: string[];
                         images?: string[];
+                        snippets?: string[];
                         query?: string;
                 };
 		done: boolean;
