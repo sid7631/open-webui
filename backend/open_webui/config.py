@@ -1254,6 +1254,12 @@ ENABLE_NOTES = PersistentConfig(
     os.environ.get("ENABLE_NOTES", "True").lower() == "true",
 )
 
+ENABLE_GALLERY = PersistentConfig(
+    "ENABLE_GALLERY",
+    "gallery.enable",
+    os.environ.get("ENABLE_GALLERY", "True").lower() == "true",
+)
+
 ENABLE_EVALUATION_ARENA_MODELS = PersistentConfig(
     "ENABLE_EVALUATION_ARENA_MODELS",
     "evaluation.arena.enable",
