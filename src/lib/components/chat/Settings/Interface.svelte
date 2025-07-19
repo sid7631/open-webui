@@ -53,10 +53,11 @@
 	let expandDetails = false;
 
 	let imageCompression = false;
-	let imageCompressionSize = {
-		width: '',
-		height: ''
-	};
+        let imageCompressionSize = {
+                width: '',
+                height: ''
+        };
+        let imageCaptionModelId = '';
 
 	// chat export
 	let stylizedPdfExport = true;
@@ -274,12 +275,13 @@
 		saveSettings({ ctrlEnterToSend });
 	};
 
-	const updateInterfaceHandler = async () => {
-		saveSettings({
-			models: [defaultModelId],
-			imageCompressionSize: imageCompressionSize
-		});
-	};
+        const updateInterfaceHandler = async () => {
+                saveSettings({
+                        models: [defaultModelId],
+                        imageCompressionSize: imageCompressionSize,
+                        imageCaptionModel: imageCaptionModelId
+                });
+        };
 
 	const toggleWebSearch = async () => {
 		webSearch = webSearch === null ? 'always' : null;
@@ -342,8 +344,10 @@
 		hapticFeedback = $settings?.hapticFeedback ?? false;
 		ctrlEnterToSend = $settings?.ctrlEnterToSend ?? false;
 
-		imageCompression = $settings?.imageCompression ?? false;
-		imageCompressionSize = $settings?.imageCompressionSize ?? { width: '', height: '' };
+                imageCompression = $settings?.imageCompression ?? false;
+                imageCompressionSize = $settings?.imageCompressionSize ?? { width: '', height: '' };
+
+                imageCaptionModelId = $settings?.imageCaptionModel ?? $models.find((m) => m.owned_by === 'ollama')?.id ?? '';
 
 		defaultModelId = $settings?.models?.at(0) ?? '';
 		if ($config?.default_models) {
@@ -1215,9 +1219,9 @@
 				</div>
 			</div>
 
-			{#if imageCompression}
-				<div>
-					<div class=" py-0.5 flex w-full justify-between text-xs">
+                        {#if imageCompression}
+                                <div>
+                                        <div class=" py-0.5 flex w-full justify-between text-xs">
 						<div id="image-compression-size-label" class=" self-center text-xs">
 							{$i18n.t('Image Max Compression Size')}
 						</div>
@@ -1244,11 +1248,29 @@
 								placeholder="Height"
 							/>
 						</div>
-					</div>
-				</div>
-			{/if}
-		</div>
-	</div>
+                                        </div>
+                                </div>
+                        {/if}
+
+                        <div>
+                                <div class=" py-0.5 flex w-full justify-between">
+                                        <div id="caption-model-label" class=" self-center text-xs">
+                                                {$i18n.t('Image Caption Model')}
+                                        </div>
+
+                                        <select
+                                                class="dark:bg-gray-900 w-fit pr-8 rounded-sm px-2 p-1 text-xs bg-transparent outline-hidden"
+                                                bind:value={imageCaptionModelId}
+                                        >
+                                                <option value="">{$i18n.t('Default')}</option>
+                                                {#each $models.filter(m => m.owned_by === 'ollama') as m}
+                                                        <option value={m.id}>{m.name}</option>
+                                                {/each}
+                                        </select>
+                                </div>
+                        </div>
+                </div>
+        </div>
 
 	<div class="flex justify-end text-sm font-medium">
 		<button

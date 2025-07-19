@@ -694,10 +694,10 @@ export const generateFollowUps = async (
 };
 
 export const generateTags = async (
-	token: string = '',
-	model: string,
-	messages: string,
-	chat_id?: string
+        token: string = '',
+        model: string,
+        messages: string,
+        chat_id?: string
 ) => {
 	let error = null;
 
@@ -762,7 +762,60 @@ export const generateTags = async (
 		// Catch and safely return empty array on any parsing errors
 		console.error('Failed to parse response: ', e);
 		return [];
-	}
+        }
+};
+
+export const generateImageCaption = async (
+        token: string = '',
+        model: string,
+        file_id: string,
+        chat_id?: string
+) => {
+        let error = null;
+
+        const res = await fetch(`${WEBUI_BASE_URL}/api/v1/tasks/image_caption/completions`, {
+                method: 'POST',
+                headers: {
+                        Accept: 'application/json',
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                        model: model,
+                        file_id: file_id,
+                        ...(chat_id && { chat_id: chat_id })
+                })
+        })
+                .then(async (res) => {
+                        if (!res.ok) throw await res.json();
+                        return res.json();
+                })
+                .catch((err) => {
+                        console.error(err);
+                        if ('detail' in err) {
+                                error = err.detail;
+                        }
+                        return null;
+                });
+
+        if (error) {
+                throw error;
+        }
+
+        try {
+                const response = res?.choices?.[0]?.message?.content ?? '';
+                const sanitizedResponse = response.replace(/['‘’`]/g, '"');
+                const jsonStartIndex = sanitizedResponse.indexOf('{');
+                const jsonEndIndex = sanitizedResponse.lastIndexOf('}');
+                if (jsonStartIndex !== -1 && jsonEndIndex !== -1) {
+                        const jsonResponse = sanitizedResponse.substring(jsonStartIndex, jsonEndIndex + 1);
+                        return JSON.parse(jsonResponse);
+                }
+                return null;
+        } catch (e) {
+                console.error('Failed to parse response: ', e);
+                return null;
+        }
 };
 
 export const generateEmoji = async (
