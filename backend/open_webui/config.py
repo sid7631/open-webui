@@ -1463,6 +1463,12 @@ IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
     os.environ.get("IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE", ""),
 )
 
+IMAGE_CAPTION_PROMPT_TEMPLATE = PersistentConfig(
+    "IMAGE_CAPTION_PROMPT_TEMPLATE",
+    "task.image.caption_prompt_template",
+    os.environ.get("IMAGE_CAPTION_PROMPT_TEMPLATE", ""),
+)
+
 DEFAULT_IMAGE_PROMPT_GENERATION_PROMPT_TEMPLATE = """### Task:
 Generate a detailed prompt for am image generation task based on the given language and context. Describe the image as if you were explaining it to someone who cannot see it. Include relevant details, colors, shapes, and any other important elements.
 
@@ -1482,6 +1488,8 @@ Strictly return in JSON format:
 <chat_history>
 {{MESSAGES:END:6}}
 </chat_history>"""
+
+DEFAULT_IMAGE_CAPTION_PROMPT_TEMPLATE = """Generate a short description and a concise caption for the provided image.\n\nStrictly return in JSON format:\n{\n    \"description\": \"<description>\",\n    \"caption\": \"<caption>\"\n}"""
 
 
 FOLLOW_UP_GENERATION_PROMPT_TEMPLATE = PersistentConfig(
@@ -2755,6 +2763,18 @@ ENABLE_IMAGE_PROMPT_GENERATION = PersistentConfig(
     "ENABLE_IMAGE_PROMPT_GENERATION",
     "image_generation.prompt.enable",
     os.environ.get("ENABLE_IMAGE_PROMPT_GENERATION", "true").lower() == "true",
+)
+
+ENABLE_IMAGE_CAPTION_GENERATION = PersistentConfig(
+    "ENABLE_IMAGE_CAPTION_GENERATION",
+    "image_generation.caption.enable",
+    os.environ.get("ENABLE_IMAGE_CAPTION_GENERATION", "true").lower() == "true",
+)
+
+DEFAULT_IMAGE_CAPTION_MODEL = PersistentConfig(
+    "DEFAULT_IMAGE_CAPTION_MODEL",
+    "image_generation.caption.default_model",
+    os.environ.get("DEFAULT_IMAGE_CAPTION_MODEL", ""),
 )
 
 AUTOMATIC1111_BASE_URL = PersistentConfig(

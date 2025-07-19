@@ -150,9 +150,10 @@ type Settings = {
 	notificationSoundAlways?: boolean;
 	stylizedPdfExport?: boolean;
 	notifications?: any;
-	imageCompression?: boolean;
-	imageCompressionSize?: any;
-	widescreenMode?: null;
+        imageCompression?: boolean;
+        imageCompressionSize?: any;
+        imageCaptionModel?: string;
+        widescreenMode?: null;
 	largeTextAsFile?: boolean;
 	promptAutocomplete?: boolean;
 	hapticFeedback?: boolean;
