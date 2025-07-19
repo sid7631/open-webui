@@ -6,6 +6,7 @@ from typing import Optional
 import logging
 import re
 import json
+import base64
 
 from open_webui.utils.chat import generate_chat_completion
 from open_webui.utils.task import (
@@ -38,6 +39,7 @@ from open_webui.config import (
     DEFAULT_MOA_GENERATION_PROMPT_TEMPLATE,
 )
 from open_webui.models.files import Files
+from open_webui.storage.provider import Storage
 from open_webui.env import SRC_LOG_LEVELS
 
 
@@ -311,8 +313,16 @@ async def generate_image_caption(
             detail="File not found",
         )
 
-    base_url = str(request.base_url).rstrip("/")
-    image_url = f"{base_url}/api/v1/files/{file.id}/content"
+    try:
+        file_path = Storage.get_file(file.path)
+        with open(file_path, "rb") as f:
+            image_bytes = f.read()
+        mime_type = file.meta.get("content_type", "image/png") if file.meta else "image/png"
+        b64 = base64.b64encode(image_bytes).decode()
+        image_url = f"data:{mime_type};base64,{b64}"
+    except Exception as e:
+        log.error("Failed to load image for caption", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to load image")
 
     if request.app.state.config.IMAGE_CAPTION_PROMPT_TEMPLATE != "":
         template = request.app.state.config.IMAGE_CAPTION_PROMPT_TEMPLATE
@@ -350,7 +360,27 @@ async def generate_image_caption(
         raise e
 
     try:
-        return await generate_chat_completion(request, form_data=payload, user=user)
+        res = await generate_chat_completion(request, form_data=payload, user=user)
+        content_resp = (
+            res.get("choices", [{}])[0]
+            .get("message", {})
+            .get("content", "")
+        )
+        try:
+            sanitized = (
+                content_resp.replace("`", '"')
+                .replace("'", '"')
+                .replace("“", '"')
+                .replace("”", '"')
+            )
+            start = sanitized.find("{")
+            end = sanitized.rfind("}")
+            if start != -1 and end != -1:
+                data = json.loads(sanitized[start : end + 1])
+                Files.update_file_metadata_by_id(file.id, data)
+        except Exception:
+            pass
+        return res
     except Exception as e:
         log.error("Exception occurred", exc_info=True)
         return JSONResponse(
