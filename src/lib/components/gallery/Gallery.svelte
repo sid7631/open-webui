@@ -4,10 +4,8 @@ import { getFiles } from '$lib/apis/files';
 import { WEBUI_API_BASE_URL } from '$lib/constants';
 import { user } from '$lib/stores';
 import Image from '$lib/components/common/Image.svelte';
-
 let images: any[] = [];
 const i18n = getContext('i18n');
-
 onMount(async () => {
     const token = $user?.token ?? '';
     try {
