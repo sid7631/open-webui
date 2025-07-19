@@ -290,9 +290,10 @@ export const updateRerankingConfig = async (token: string, payload: RerankingMod
 };
 
 export interface SearchDocument {
-	status: boolean;
-	collection_name: string;
-	filenames: string[];
+        status: boolean;
+        collection_name: string;
+        filenames: string[];
+        images: string[];
 }
 
 export const processFile = async (
