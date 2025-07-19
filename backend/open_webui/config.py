@@ -2498,6 +2498,12 @@ WEB_SEARCH_TRUST_ENV = PersistentConfig(
     os.getenv("WEB_SEARCH_TRUST_ENV", "False").lower() == "true",
 )
 
+DDG_SAFESEARCH = PersistentConfig(
+    "DDG_SAFESEARCH",
+    "rag.web.search.ddg_safesearch",
+    os.getenv("DDG_SAFESEARCH", "moderate"),
+)
+
 
 SEARXNG_QUERY_URL = PersistentConfig(
     "SEARXNG_QUERY_URL",

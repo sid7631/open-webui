@@ -7,6 +7,7 @@ import asyncio
 
 
 import uuid
+import requests
 from datetime import datetime
 from pathlib import Path
 from typing import Iterator, List, Optional, Sequence, Union
@@ -32,7 +33,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter, TokenTextSpl
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from langchain_core.documents import Document
 
-from open_webui.models.files import FileModel, Files
+from open_webui.models.files import FileModel, Files, FileForm
 from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
 
@@ -1790,6 +1791,7 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
             request.app.state.config.WEB_SEARCH_DOMAIN_FILTER_LIST,
+            request.app.state.config.DDG_SAFESEARCH,
         )
     elif engine == "tavily":
         if request.app.state.config.TAVILY_API_KEY:
@@ -1906,6 +1908,7 @@ def search_images(request: Request, engine: str, query: str) -> List[str]:
         return search_duckduckgo_images(
             query,
             request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            request.app.state.config.DDG_SAFESEARCH,
         )
     elif engine == "brave":
         if request.app.state.config.BRAVE_SEARCH_API_KEY:
@@ -2019,6 +2022,12 @@ async def process_web_search(
             images.extend(doc.metadata.get("images", []))
         images = list(dict.fromkeys(images))
 
+        image_file_ids = []
+        for url in images:
+            file_id = save_image_from_url(request, url, " ".join(form_data.queries), user)
+            if file_id:
+                image_file_ids.append(file_id)
+
         if request.app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL:
             return {
                 "status": True,
@@ -2033,6 +2042,7 @@ async def process_web_search(
                 ],
                 "loaded_count": len(docs),
                 "images": images,
+                "image_file_ids": image_file_ids,
                 "snippets": snippets,
             }
         else:
@@ -2061,6 +2071,7 @@ async def process_web_search(
                 "filenames": urls,
                 "loaded_count": len(docs),
                 "images": images,
+                "image_file_ids": image_file_ids,
                 "snippets": snippets,
             }
     except Exception as e:
@@ -2255,6 +2266,43 @@ def reset_upload_dir(user=Depends(get_admin_user)) -> bool:
     except Exception as e:
         log.exception(f"Failed to process the directory {folder}. Reason: {e}")
     return True
+
+
+def save_image_from_url(request: Request, url: str, query: str, user) -> Optional[str]:
+    """Download image from URL and store as File. Returns file id."""
+    try:
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        content_type = resp.headers.get("content-type", "image/jpeg")
+        ext = mimetypes.guess_extension(content_type.split(";")[0]) or ".jpg"
+        file_id = str(uuid.uuid4())
+        filename = f"{file_id}{ext}"
+        tags = {
+            "OpenWebUI-User-Email": user.email,
+            "OpenWebUI-User-Id": user.id,
+            "OpenWebUI-File-Id": file_id,
+        }
+        from io import BytesIO
+
+        _, file_path = Storage.upload_file(BytesIO(resp.content), filename, tags)
+
+        Files.insert_new_file(
+            user.id,
+            FileForm(
+                id=file_id,
+                filename=filename,
+                path=file_path,
+                meta={
+                    "name": filename,
+                    "content_type": content_type,
+                    "query": query,
+                },
+            ),
+        )
+        return file_id
+    except Exception as e:
+        log.error(f"Failed to save image {url}: {e}")
+        return None
 
 
 if ENV == "dev":
