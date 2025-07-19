@@ -17,6 +17,9 @@ from open_webui.models.folders import Folders
 from open_webui.config import ENABLE_ADMIN_CHAT_ACCESS, ENABLE_ADMIN_EXPORT
 from open_webui.constants import ERROR_MESSAGES
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.utils.chat import generate_chat_completion
+from open_webui.models.memories import Memories
+from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 
@@ -860,3 +863,53 @@ async def delete_all_tags_by_id(id: str, user=Depends(get_verified_user)):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail=ERROR_MESSAGES.NOT_FOUND
         )
+
+
+############################
+# SummarizeChat
+############################
+
+
+class ChatSummaryForm(BaseModel):
+    chat_id: str
+
+
+@router.post("/{chat_id}/summary", response_model=Optional[MemoryModel])
+async def summarize_chat(chat_id: str, request: Request, user=Depends(get_verified_user)):
+    chat = Chats.get_chat_by_id_and_user_id(chat_id, user.id)
+    if chat is None:
+        raise HTTPException(status_code=404, detail="Chat not found")
+
+    messages = chat.chat.get("messages", [])
+    text = "\n".join([f"{m.get('role')}: {m.get('content')}" for m in messages])
+    prompt = f"Summarize the following conversation in a short paragraph:\n{text}"
+    model_id = request.app.state.config.TASK_MODEL or list(request.app.state.MODELS.keys())[0]
+
+    payload = {
+        "model": model_id,
+        "messages": [{"role": "user", "content": prompt}],
+        "stream": False,
+    }
+
+    result = await generate_chat_completion(request, form_data=payload, user=user)
+    summary = result.get("choices", [{}])[0].get("message", {}).get("content", "")
+
+    memory = Memories.insert_new_memory(
+        user.id,
+        summary,
+        {"type": "chat_summary", "chat_id": chat_id},
+    )
+
+    VECTOR_DB_CLIENT.upsert(
+        collection_name=f"user-memory-{user.id}",
+        items=[
+            {
+                "id": memory.id,
+                "text": memory.content,
+                "vector": request.app.state.EMBEDDING_FUNCTION(memory.content, user=user),
+                "metadata": {"created_at": memory.created_at, "tags": ["summary"]},
+            }
+        ],
+    )
+
+    return memory
