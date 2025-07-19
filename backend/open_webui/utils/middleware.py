@@ -414,6 +414,7 @@ async def chat_web_search_handler(
             "data": {
                 "action": "web_search",
                 "description": "Searching the web",
+                "query": ", ".join(queries),
                 "done": False,
             },
         }
@@ -469,6 +470,8 @@ async def chat_web_search_handler(
                         "action": "web_search",
                         "description": "Searched {{count}} sites",
                         "urls": results["filenames"],
+                        "images": results.get("images", []),
+                        "query": ", ".join(queries),
                         "done": True,
                     },
                 }
@@ -480,6 +483,7 @@ async def chat_web_search_handler(
                     "data": {
                         "action": "web_search",
                         "description": "No search results found",
+                        "query": ", ".join(queries),
                         "done": True,
                         "error": True,
                     },
@@ -495,6 +499,7 @@ async def chat_web_search_handler(
                     "action": "web_search",
                     "description": "An error occurred while searching the web",
                     "queries": queries,
+                    "query": ", ".join(queries),
                     "done": True,
                     "error": True,
                 },
@@ -1035,6 +1040,14 @@ async def process_chat_payload(request, form_data, user, metadata, model):
                     "done": True,
                     "hidden": True,
                 },
+            }
+        )
+
+    if metadata.get("files"):
+        await event_emitter(
+            {
+                "type": "chat:message:files",
+                "data": {"files": metadata["files"]},
             }
         )
 

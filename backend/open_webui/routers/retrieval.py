@@ -46,11 +46,11 @@ from open_webui.retrieval.loaders.youtube import YoutubeLoader
 # Web search engines
 from open_webui.retrieval.web.main import SearchResult
 from open_webui.retrieval.web.utils import get_web_loader
-from open_webui.retrieval.web.brave import search_brave
+from open_webui.retrieval.web.brave import search_brave, search_brave_images
 from open_webui.retrieval.web.kagi import search_kagi
 from open_webui.retrieval.web.mojeek import search_mojeek
 from open_webui.retrieval.web.bocha import search_bocha
-from open_webui.retrieval.web.duckduckgo import search_duckduckgo
+from open_webui.retrieval.web.duckduckgo import search_duckduckgo, search_duckduckgo_images
 from open_webui.retrieval.web.google_pse import search_google_pse
 from open_webui.retrieval.web.jina_search import search_jina
 from open_webui.retrieval.web.searchapi import search_searchapi
@@ -1900,12 +1900,33 @@ def search_web(request: Request, engine: str, query: str) -> list[SearchResult]:
         raise Exception("No search engine API key found in environment variables")
 
 
+def search_images(request: Request, engine: str, query: str) -> List[str]:
+    """Search for images using the configured search engine."""
+    if engine == "duckduckgo":
+        return search_duckduckgo_images(
+            query,
+            request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+        )
+    elif engine == "brave":
+        if request.app.state.config.BRAVE_SEARCH_API_KEY:
+            return search_brave_images(
+                request.app.state.config.BRAVE_SEARCH_API_KEY,
+                query,
+                request.app.state.config.WEB_SEARCH_RESULT_COUNT,
+            )
+        else:
+            return []
+    else:
+        return []
+
+
 @router.post("/process/web/search")
 async def process_web_search(
     request: Request, form_data: SearchForm, user=Depends(get_verified_user)
 ):
 
     urls = []
+    images_from_search = []
     try:
         logging.info(
             f"trying to web search with {request.app.state.config.WEB_SEARCH_ENGINE, form_data.queries}"
@@ -1921,7 +1942,18 @@ async def process_web_search(
             for query in form_data.queries
         ]
 
+        image_tasks = [
+            run_in_threadpool(
+                search_images,
+                request,
+                request.app.state.config.WEB_SEARCH_ENGINE,
+                query,
+            )
+            for query in form_data.queries
+        ]
+
         search_results = await asyncio.gather(*search_tasks)
+        image_results = await asyncio.gather(*image_tasks)
 
         for result in search_results:
             if result:
@@ -1930,6 +1962,8 @@ async def process_web_search(
                         urls.append(item.link)
 
         urls = list(dict.fromkeys(urls))
+        images_from_search = [img for r in image_results for img in r if r]
+        images_from_search = list(dict.fromkeys(images_from_search))
         log.debug(f"urls: {urls}")
 
     except Exception as e:
@@ -1972,7 +2006,7 @@ async def process_web_search(
             doc.metadata.get("source") for doc in docs if doc.metadata.get("source")
         ]  # only keep the urls returned by the loader
 
-        images = []
+        images = images_from_search.copy()
         for doc in docs:
             images.extend(doc.metadata.get("images", []))
         images = list(dict.fromkeys(images))

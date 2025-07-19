@@ -59,20 +59,22 @@
 		files?: { type: string; url: string }[];
 		timestamp: number;
 		role: string;
-		statusHistory?: {
-			done: boolean;
-			action: string;
-			description: string;
-			urls?: string[];
-			query?: string;
-		}[];
-		status?: {
-			done: boolean;
-			action: string;
-			description: string;
-			urls?: string[];
-			query?: string;
-		};
+                statusHistory?: {
+                        done: boolean;
+                        action: string;
+                        description: string;
+                        urls?: string[];
+                        images?: string[];
+                        query?: string;
+                }[];
+                status?: {
+                        done: boolean;
+                        action: string;
+                        description: string;
+                        urls?: string[];
+                        images?: string[];
+                        query?: string;
+                };
 		done: boolean;
 		error?: boolean | { content: string };
 		sources?: string[];
@@ -706,26 +708,36 @@
 							{/if}
 						{/if}
 
-						{#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}
-							<div class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap">
-								{#each message.files as file}
-									<div>
-										{#if file.type === 'image'}
-											<Image src={file.url} alt={message.content} />
-										{:else}
-											<FileItem
-												item={file}
-												url={file.url}
-												name={file.name}
-												type={file.type}
-												size={file?.size}
-												colorClassName="bg-white dark:bg-gray-850 "
-											/>
-										{/if}
-									</div>
-								{/each}
-							</div>
-						{/if}
+                                                {#if message?.files && message.files?.filter((f) => f.type === 'image').length > 0}
+                                                        <div class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap">
+                                                                {#each message.files as file}
+                                                                        <div>
+                                                                                {#if file.type === 'image'}
+                                                                                        <Image src={file.url} alt={message.content} />
+                                                                                {:else}
+                                                                                        <FileItem
+                                                                                                item={file}
+                                                                                                url={file.url}
+                                                                                                name={file.name}
+                                                                                                type={file.type}
+                                                                                                size={file?.size}
+                                                                                                colorClassName="bg-white dark:bg-gray-850 "
+                                                                                        />
+                                                                                {/if}
+                                                                        </div>
+                                                                {/each}
+                                                        </div>
+                                                {/if}
+
+                                                {#if message?.files && message.files?.filter((f) => f.type === 'web_search' && f.images?.length > 0).length > 0}
+                                                        <div class="my-1 w-full flex overflow-x-auto gap-2 flex-wrap">
+                                                                {#each message.files.filter((f) => f.type === 'web_search' && f.images?.length > 0) as file}
+                                                                        {#each file.images as img}
+                                                                                <Image src={img} alt={message.content} />
+                                                                        {/each}
+                                                                {/each}
+                                                        </div>
+                                                {/if}
 
 						{#if edit === true}
 							<div class="w-full bg-gray-50 dark:bg-gray-800 rounded-3xl px-5 py-3 my-2">

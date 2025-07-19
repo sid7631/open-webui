@@ -58,6 +58,7 @@ dependencies = [
     "langchain-community==0.3.26",
 
     "fake-useragent==2.1.0",
+    "posthog==3.8.3",
     "chromadb==0.6.3",
     "pymilvus==2.5.0",
     "qdrant-client==1.14.3",
