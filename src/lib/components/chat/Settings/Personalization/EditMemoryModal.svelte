@@ -2,7 +2,8 @@
 	import { createEventDispatcher, getContext } from 'svelte';
 	import { toast } from 'svelte-sonner';
 
-	import { updateMemoryById } from '$lib/apis/memories';
+import { updateMemoryById, updateMemoryTags } from '$lib/apis/memories';
+import Tags from '$lib/components/common/Tags.svelte';
 
 	import Spinner from '$lib/components/common/Spinner.svelte';
 	import Modal from '$lib/components/common/Modal.svelte';
@@ -15,32 +16,36 @@
 
 	const i18n = getContext('i18n');
 
-	let loading = false;
-	let content = '';
+let loading = false;
+let content = '';
+let tagsList: { name: string }[] = [];
 
 	$: if (show) {
 		setContent();
 	}
 
-	const setContent = () => {
-		content = memory.content;
-	};
+        const setContent = () => {
+                content = memory.content;
+                tagsList = memory?.meta?.tags?.map((t) => ({ name: t })) ?? [];
+        };
 
 	const submitHandler = async () => {
 		loading = true;
 
-		const res = await updateMemoryById(localStorage.token, memory.id, content).catch((error) => {
-			toast.error(`${error}`);
+                const res = await updateMemoryById(localStorage.token, memory.id, content).catch((error) => {
+                        toast.error(`${error}`);
 
-			return null;
-		});
+                        return null;
+                });
 
-		if (res) {
-			console.log(res);
-			toast.success($i18n.t('Memory updated successfully'));
-			dispatch('save');
-			show = false;
-		}
+                if (res) {
+                        await updateMemoryTags(localStorage.token, memory.id, tagsList.map(t => t.name)).catch(() => {});
+                        console.log(res);
+                        toast.success($i18n.t('Memory updated successfully'));
+                        dispatch('save');
+                        show = false;
+                        tagsList = [];
+                }
 
 		loading = false;
 	};
@@ -79,10 +84,22 @@
 							placeholder={$i18n.t('Enter a detail about yourself for your LLMs to recall')}
 						/>
 
-						<div class="text-xs text-gray-500">
-							ⓘ {$i18n.t('Refer to yourself as "User" (e.g., "User is learning Spanish")')}
-						</div>
-					</div>
+                                                <div class="text-xs text-gray-500">
+                                                        ⓘ {$i18n.t('Refer to yourself as "User" (e.g., "User is learning Spanish")')}
+                                                </div>
+                                        </div>
+
+                                        <div class="mt-2">
+                                                <Tags
+                                                        tags={tagsList}
+                                                        on:add={(e) => {
+                                                                tagsList = [...tagsList, { name: e.detail }];
+                                                        }}
+                                                        on:delete={(e) => {
+                                                                tagsList = tagsList.filter((t) => t.name !== e.detail);
+                                                        }}
+                                                />
+                                        </div>
 
 					<div class="flex justify-end pt-1 text-sm font-medium">
 						<button

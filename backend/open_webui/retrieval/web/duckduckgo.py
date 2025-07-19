@@ -5,13 +5,15 @@ from open_webui.retrieval.web.main import SearchResult, get_filtered_results
 from ddgs import DDGS
 from ddgs.exceptions import RatelimitException
 from open_webui.env import SRC_LOG_LEVELS
+from open_webui.config import DDG_SAFESEARCH
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 def search_duckduckgo(
-    query: str, count: int, filter_list: Optional[list[str]] = None
+    query: str, count: int, filter_list: Optional[list[str]] = None,
+    safesearch: str = DDG_SAFESEARCH.value,
 ) -> list[SearchResult]:
     """
     Search using DuckDuckGo's Search API and return the results as a list of SearchResult objects.
@@ -28,7 +30,7 @@ def search_duckduckgo(
         # Use the ddgs.text() method to perform the search
         try:
             search_results = ddgs.text(
-                query, safesearch="moderate", max_results=count, backend="lite"
+                query, safesearch=safesearch, max_results=count, backend="lite"
             )
         except RatelimitException as e:
             log.error(f"RatelimitException: {e}")
@@ -46,12 +48,12 @@ def search_duckduckgo(
     ]
 
 
-def search_duckduckgo_images(query: str, count: int) -> List[str]:
+def search_duckduckgo_images(query: str, count: int, safesearch: str = DDG_SAFESEARCH.value) -> List[str]:
     """Return image URLs from DuckDuckGo image search."""
     images = []
     with DDGS() as ddgs:
         try:
-            for result in ddgs.images(query, safesearch="moderate", max_results=count):
+            for result in ddgs.images(query, safesearch=safesearch, max_results=count):
                 url = result.get("image") or result.get("thumbnail")
                 if url:
                     images.append(url)
