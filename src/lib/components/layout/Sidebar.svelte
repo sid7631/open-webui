@@ -620,9 +620,38 @@
 					</div>
 				</a>
 			</div>
-		{/if}
+                {/if}
 
-		{#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
+                {#if ($config?.features?.enable_gallery ?? false) && ($user?.role === 'admin' || ($user?.permissions?.features?.notes ?? true))}
+                        <div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
+                                <a
+                                        class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"
+                                        href="/gallery"
+                                        on:click={() => {
+                                                selectedChatId = null;
+                                                chatId.set('');
+
+                                                if ($mobile) {
+                                                        showSidebar.set(false);
+                                                }
+                                        }}
+                                        draggable="false"
+                                >
+                                        <div class="self-center">
+                                                <svg class="size-4" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2">
+                                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M3 5.25C3 4.56 3.56 4 4.25 4h15.5c.69 0 1.25.56 1.25 1.25v13.5c0 .69-.56 1.25-1.25 1.25H4.25C3.56 20 3 19.44 3 18.75V5.25Z"/>
+                                                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" d="M9 11.25l2.25 2.25 3-3L21 18"/>
+                                                </svg>
+                                        </div>
+
+                                        <div class="flex self-center translate-y-[0.5px]">
+                                                <div class=" self-center text-sm font-primary">{$i18n.t('Gallery')}</div>
+                                        </div>
+                                </a>
+                        </div>
+                {/if}
+
+                {#if $user?.role === 'admin' || $user?.permissions?.workspace?.models || $user?.permissions?.workspace?.knowledge || $user?.permissions?.workspace?.prompts || $user?.permissions?.workspace?.tools}
 			<div class="px-1.5 flex justify-center text-gray-800 dark:text-gray-200">
 				<a
 					class="grow flex items-center space-x-3 rounded-lg px-2 py-[7px] hover:bg-gray-100 dark:hover:bg-gray-900 transition"

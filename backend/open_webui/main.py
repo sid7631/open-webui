@@ -261,6 +261,7 @@ from open_webui.config import (
     WEB_SEARCH_RESULT_COUNT,
     WEB_SEARCH_CONCURRENT_REQUESTS,
     WEB_SEARCH_TRUST_ENV,
+    DDG_SAFESEARCH,
     WEB_SEARCH_DOMAIN_FILTER_LIST,
     JINA_API_KEY,
     SEARCHAPI_API_KEY,
@@ -321,6 +322,7 @@ from open_webui.config import (
     API_KEY_ALLOWED_ENDPOINTS,
     ENABLE_CHANNELS,
     ENABLE_NOTES,
+    ENABLE_GALLERY,
     ENABLE_COMMUNITY_SHARING,
     ENABLE_MESSAGE_RATING,
     ENABLE_USER_WEBHOOKS,
@@ -451,6 +453,11 @@ from open_webui.utils.plugin import install_tool_and_function_dependencies
 from open_webui.utils.oauth import OAuthManager
 from open_webui.utils.security_headers import SecurityHeadersMiddleware
 from open_webui.utils.redis import get_redis_connection
+from open_webui.models.chats import Chats
+from open_webui.models.users import Users
+from open_webui.models.memories import Memories
+from open_webui.utils.chat import generate_chat_completion
+from open_webui.retrieval.vector.factory import VECTOR_DB_CLIENT
 
 from open_webui.tasks import (
     redis_task_command_listener,
@@ -469,6 +476,64 @@ if SAFE_MODE:
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
+
+
+async def periodic_chat_summarization(app: FastAPI):
+    while True:
+        await asyncio.sleep(86400)
+        users_data = Users.get_users()
+        users = users_data.get("users", []) if isinstance(users_data, dict) else []
+        for u in users:
+            chats = Chats.get_chats_by_user_id(u.id)
+            for chat in chats:
+                messages = chat.chat.get("messages", [])
+                if not messages:
+                    continue
+                text = "\n".join([f"{m.get('role')}: {m.get('content')}" for m in messages])
+                prompt = f"Summarize the following conversation in a short paragraph:\n{text}"
+                model_id = app.state.config.TASK_MODEL or list(app.state.MODELS.keys())[0]
+                payload = {
+                    "model": model_id,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "stream": False,
+                }
+                req = Request(
+                    {
+                        "type": "http",
+                        "asgi.version": "3.0",
+                        "asgi.spec_version": "2.0",
+                        "method": "POST",
+                        "path": "/internal",
+                        "query_string": b"",
+                        "headers": Headers({}).raw,
+                        "client": ("127.0.0.1", 0),
+                        "server": ("127.0.0.1", 80),
+                        "scheme": "http",
+                        "app": app,
+                    }
+                )
+                try:
+                    res = await generate_chat_completion(req, form_data=payload, user=u)
+                    summary = res.get("choices", [{}])[0].get("message", {}).get("content", "")
+                    if summary:
+                        memory = Memories.insert_new_memory(
+                            u.id,
+                            summary,
+                            {"type": "chat_summary", "chat_id": chat.id},
+                        )
+                        VECTOR_DB_CLIENT.upsert(
+                            collection_name=f"user-memory-{u.id}",
+                            items=[
+                                {
+                                    "id": memory.id,
+                                    "text": memory.content,
+                                    "vector": app.state.EMBEDDING_FUNCTION(memory.content, user=u),
+                                    "metadata": {"created_at": memory.created_at, "tags": ["summary"]},
+                                }
+                            ],
+                        )
+                except Exception as e:
+                    log.error(f"summary job error: {e}")
 
 
 class SPAStaticFiles(StaticFiles):
@@ -537,6 +602,7 @@ async def lifespan(app: FastAPI):
         limiter.total_tokens = THREAD_POOL_SIZE
 
     asyncio.create_task(periodic_usage_pool_cleanup())
+    asyncio.create_task(periodic_chat_summarization(app))
 
     if app.state.config.ENABLE_BASE_MODELS_CACHE:
         await get_all_models(
@@ -690,6 +756,7 @@ app.state.config.MODEL_ORDER_LIST = MODEL_ORDER_LIST
 
 app.state.config.ENABLE_CHANNELS = ENABLE_CHANNELS
 app.state.config.ENABLE_NOTES = ENABLE_NOTES
+app.state.config.ENABLE_GALLERY = ENABLE_GALLERY
 app.state.config.ENABLE_COMMUNITY_SHARING = ENABLE_COMMUNITY_SHARING
 app.state.config.ENABLE_MESSAGE_RATING = ENABLE_MESSAGE_RATING
 app.state.config.ENABLE_USER_WEBHOOKS = ENABLE_USER_WEBHOOKS
@@ -831,6 +898,7 @@ app.state.config.WEB_SEARCH_RESULT_COUNT = WEB_SEARCH_RESULT_COUNT
 app.state.config.WEB_SEARCH_CONCURRENT_REQUESTS = WEB_SEARCH_CONCURRENT_REQUESTS
 app.state.config.WEB_LOADER_ENGINE = WEB_LOADER_ENGINE
 app.state.config.WEB_SEARCH_TRUST_ENV = WEB_SEARCH_TRUST_ENV
+app.state.config.DDG_SAFESEARCH = DDG_SAFESEARCH
 app.state.config.BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL = (
     BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
 )
@@ -1574,6 +1642,7 @@ async def get_app_config(request: Request):
                     "enable_direct_connections": app.state.config.ENABLE_DIRECT_CONNECTIONS,
                     "enable_channels": app.state.config.ENABLE_CHANNELS,
                     "enable_notes": app.state.config.ENABLE_NOTES,
+                    "enable_gallery": app.state.config.ENABLE_GALLERY,
                     "enable_web_search": app.state.config.ENABLE_WEB_SEARCH,
                     "enable_code_execution": app.state.config.ENABLE_CODE_EXECUTION,
                     "enable_code_interpreter": app.state.config.ENABLE_CODE_INTERPRETER,
