@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Optional, List
 
 import requests
 from open_webui.retrieval.web.main import SearchResult, get_filtered_results
@@ -42,3 +42,24 @@ def search_brave(
         )
         for result in results[:count]
     ]
+
+
+def search_brave_images(api_key: str, query: str, count: int) -> List[str]:
+    """Return image URLs using Brave's image search API."""
+    url = "https://api.search.brave.com/res/v1/images/search"
+    headers = {
+        "Accept": "application/json",
+        "Accept-Encoding": "gzip",
+        "X-Subscription-Token": api_key,
+    }
+    params = {"q": query, "count": count}
+
+    try:
+        response = requests.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        json_response = response.json()
+        results = json_response.get("results", [])
+        return [item.get("url") for item in results if item.get("url")][:count]
+    except Exception as e:
+        log.error(f"Error fetching brave images: {e}")
+        return []
