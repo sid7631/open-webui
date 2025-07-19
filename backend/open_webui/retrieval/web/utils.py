@@ -99,7 +99,18 @@ def extract_metadata(soup, url):
         metadata["description"] = description.get("content", "No description found.")
     if html := soup.find("html"):
         metadata["language"] = html.get("lang", "No language found.")
+    metadata["images"] = extract_images(soup, url)
     return metadata
+
+
+def extract_images(soup, base_url):
+    images = []
+    for img in soup.find_all("img"):
+        src = img.get("src")
+        if not src:
+            continue
+        images.append(urllib.parse.urljoin(base_url, src))
+    return images
 
 
 def verify_ssl_cert(url: str) -> bool:

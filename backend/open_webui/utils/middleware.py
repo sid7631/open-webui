@@ -440,6 +440,7 @@ async def chat_web_search_handler(
                             "type": "web_search",
                             "urls": results["filenames"],
                             "queries": queries,
+                            "images": results.get("images", []),
                         }
                     )
             elif results.get("docs"):
@@ -452,8 +453,12 @@ async def chat_web_search_handler(
                         "type": "web_search",
                         "urls": results["filenames"],
                         "queries": queries,
+                        "images": results.get("images", []),
                     }
                 )
+
+            for img in results.get("images", []):
+                files.append({"type": "image", "url": img})
 
             form_data["files"] = files
 
