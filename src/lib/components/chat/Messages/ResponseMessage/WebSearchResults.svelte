@@ -5,7 +5,7 @@
         import Collapsible from '$lib/components/common/Collapsible.svelte';
         import Image from '$lib/components/common/Image.svelte';
 
-        export let status = { urls: [], images: [], query: '' };
+       export let status = { urls: [], images: [], snippets: [], query: '' };
 	let state = false;
 </script>
 
@@ -59,37 +59,41 @@
 			</a>
 		{/if}
 
-                {#each status.urls as url, urlIdx}
-			<a
-				href={url}
-				target="_blank"
-				class="flex w-full items-center p-3 px-4 {urlIdx === status.urls.length - 1
-					? ''
-					: 'border-b border-gray-300/30 dark:border-gray-700/50'} group/item justify-between font-normal text-gray-800 dark:text-gray-300"
-			>
-				<div class=" line-clamp-1">
-					{url}
-				</div>
+               {#each status.urls as url, urlIdx}
+                       <div class="border-b border-gray-300/30 dark:border-gray-700/50 last:border-b-0">
+                               <a
+                                       href={url}
+                                       target="_blank"
+                                       class="flex w-full items-center p-3 px-4 group/item justify-between font-normal text-gray-800 dark:text-gray-300"
+                               >
+                                       <div class=" line-clamp-1">
+                                               {url}
+                                       </div>
 
-				<div
-					class=" ml-1 text-white dark:text-gray-900 group-hover/item:text-gray-600 dark:group-hover/item:text-white transition"
-				>
-					<!--  -->
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						viewBox="0 0 16 16"
-						fill="currentColor"
-						class="size-4"
-					>
-						<path
-							fill-rule="evenodd"
-							d="M4.22 11.78a.75.75 0 0 1 0-1.06L9.44 5.5H5.75a.75.75 0 0 1 0-1.5h5.5a.75.75 0 0 1 .75.75v5.5a.75.75 0 0 1-1.5 0V6.56l-5.22 5.22a.75.75 0 0 1-1.06 0Z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-				</div>
-			</a>
-                {/each}
+                                       <div
+                                               class=" ml-1 text-white dark:text-gray-900 group-hover/item:text-gray-600 dark:group-hover/item:text-white transition"
+                                       >
+                                               <svg
+                                                       xmlns="http://www.w3.org/2000/svg"
+                                                       viewBox="0 0 16 16"
+                                                       fill="currentColor"
+                                                       class="size-4"
+                                               >
+                                                       <path
+                                                               fill-rule="evenodd"
+                                                               d="M4.22 11.78a.75.75 0 0 1 0-1.06L9.44 5.5H5.75a.75.75 0 0 1 0-1.5h5.5a.75.75 0 0 1 .75.75v5.5a.75.75 0 0 1-1.5 0V6.56l-5.22 5.22a.75.75 0 0 1-1.06 0Z"
+                                                               clip-rule="evenodd"
+                                                       />
+                                               </svg>
+                                       </div>
+                               </a>
+                               {#if status.snippets && status.snippets[urlIdx]}
+                                       <div class="px-4 pb-3 text-gray-600 dark:text-gray-400 text-wrap">
+                                               {status.snippets[urlIdx]}
+                                       </div>
+                               {/if}
+                       </div>
+               {/each}
                 {#if status.images && status.images.length > 0}
                         <div class="flex overflow-x-auto gap-2 p-3 px-4 border-t border-gray-300/30 dark:border-gray-700/50">
                                 {#each status.images as img}

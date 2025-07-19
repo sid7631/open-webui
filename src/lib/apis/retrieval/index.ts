@@ -294,6 +294,7 @@ export interface SearchDocument {
         collection_name: string;
         filenames: string[];
         images: string[];
+        snippets: string[];
 }
 
 export const processFile = async (

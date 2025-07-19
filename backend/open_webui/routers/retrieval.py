@@ -2006,6 +2006,14 @@ async def process_web_search(
             doc.metadata.get("source") for doc in docs if doc.metadata.get("source")
         ]  # only keep the urls returned by the loader
 
+        snippets = []
+        for doc in docs:
+            snippet = doc.metadata.get("snippet") or doc.metadata.get("description")
+            if snippet:
+                snippets.append(snippet)
+            else:
+                snippets.append("")
+
         images = images_from_search.copy()
         for doc in docs:
             images.extend(doc.metadata.get("images", []))
@@ -2025,6 +2033,7 @@ async def process_web_search(
                 ],
                 "loaded_count": len(docs),
                 "images": images,
+                "snippets": snippets,
             }
         else:
             # Create a single collection for all documents
@@ -2052,6 +2061,7 @@ async def process_web_search(
                 "filenames": urls,
                 "loaded_count": len(docs),
                 "images": images,
+                "snippets": snippets,
             }
     except Exception as e:
         log.exception(e)
